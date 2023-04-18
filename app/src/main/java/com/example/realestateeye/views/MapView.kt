@@ -10,13 +10,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
-import com.bumptech.glide.integration.compose.GlideImage
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.example.realestateeye.models.RealEstateListing
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
+import com.skydoves.landscapist.ImageOptions
+import com.skydoves.landscapist.coil.CoilImage
 
 
 
@@ -35,7 +39,6 @@ fun MapView(listings: List<RealEstateListing>) {
     }
 }
 
-@OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun MapMarkersWithCustomWindow(listings: List<RealEstateListing>) {
     for (listing in listings) {
@@ -58,22 +61,18 @@ fun MapMarkersWithCustomWindow(listings: List<RealEstateListing>) {
                     modifier = Modifier.padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    GlideImage(
-                        model = listing.imgUrl,
-                        contentDescription = "Image of listing",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .height(160.dp)
-                            .fillMaxWidth()
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(listing.listingUrl)
+                            .build(),
+                        contentDescription = "image of the listing",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.size(120.dp)
                     )
-
                     Spacer(modifier = Modifier.height(24.dp))
                     Text(text = listing.address.toString(), textAlign = TextAlign.Center)
                     Spacer(modifier = Modifier.height(24.dp))
-//                    DefaultLinkifyText(text = listing.listingUrl)
                     Text(text = listing.listingUrl.toString(), textAlign = TextAlign.Center, modifier = Modifier.clickable {
-//                        OpenUrl(uri = listing.listingUrl)
-
                     })
                 }
             }
