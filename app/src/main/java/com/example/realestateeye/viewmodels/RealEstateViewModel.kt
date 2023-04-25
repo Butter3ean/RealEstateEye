@@ -14,7 +14,7 @@ import retrofit2.converter.gson.GsonConverterFactory
 class RealEstateViewModel: ViewModel() {
 
     private val retrofit = Retrofit.Builder()
-        .baseUrl("https://realestatelistings-realestatelistings.azuremicroservices.io")
+        .baseUrl("https://real-estate-eye-api.herokuapp.com")
         .addConverterFactory(GsonConverterFactory.create())
         .client(OkHttpClient())
         .build()
@@ -31,6 +31,19 @@ class RealEstateViewModel: ViewModel() {
                     _listings.value = response.body()
                 }
             } catch(_: java.lang.Exception) {
+
+            }
+        }
+    }
+
+    fun getListingsByCity(city: String) {
+        viewModelScope.launch {
+            try {
+                val response = listingApiService.getListingsByCity(city)
+                if(response.isSuccessful) {
+                    _listings.value = response.body()
+                }
+            } catch (_: java.lang.Exception) {
 
             }
         }

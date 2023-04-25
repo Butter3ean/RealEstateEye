@@ -29,7 +29,7 @@ fun SetupNavGraph(navHostController: NavHostController) {
             HomeView(navController = navHostController)
         }
         composable(route = Screen.MapScreen.route) {
-            MapView(listings = listings)
+            MapView()
         }
         composable(route = Screen.CameraScreen.route) {
             CameraView()

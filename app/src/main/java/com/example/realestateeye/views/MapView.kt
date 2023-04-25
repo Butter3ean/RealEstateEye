@@ -1,31 +1,32 @@
 package com.example.realestateeye.views
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import coil.request.ImageRequest
 import com.example.realestateeye.models.RealEstateListing
+import com.example.realestateeye.viewmodels.RealEstateViewModel
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
-import com.skydoves.landscapist.ImageOptions
-import com.skydoves.landscapist.coil.CoilImage
 
 
-
+@SuppressLint("MissingPermission")
 @Composable
-fun MapView(listings: List<RealEstateListing>) {
+fun MapView() {
+
+    val listingViewModel: RealEstateViewModel = viewModel()
+    val listings by listingViewModel.listings.observeAsState(initial = emptyList())
 
     val cameraPositionState = rememberCameraPositionState()
 
@@ -35,9 +36,49 @@ fun MapView(listings: List<RealEstateListing>) {
         properties = MapProperties(isMyLocationEnabled = true)
     ) {
         MapMarkersWithCustomWindow(listings = listings)
+    }
 
+    listingViewModel.getListings()
+
+}
+
+
+
+
+@Composable
+fun MapMarkersWithWindow(listings: List<RealEstateListing>) {
+    for (listing in listings) {
+
+        val state = MarkerState(
+            position = LatLng(
+                listing.coordinates.latitude,
+                listing.coordinates.longitude
+            )
+        )
+
+        MarkerInfoWindowContent(
+            state = state
+        ) {
+            Box(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .size(240.dp)
+            ) {
+                Column() {
+                    AsyncImage(
+                        model = listing.urls.imageUrl,
+                        contentDescription = "Image of the listing",
+                        contentScale = ContentScale.Crop
+                    )
+
+
+                }
+
+            }
+        }
     }
 }
+
 
 @Composable
 fun MapMarkersWithCustomWindow(listings: List<RealEstateListing>) {
@@ -48,8 +89,7 @@ fun MapMarkersWithCustomWindow(listings: List<RealEstateListing>) {
                     listing.coordinates.latitude,
                     listing.coordinates.longitude
                 )
-
-            ),
+            )
         ) {
             Box(
                 modifier = Modifier.background(
@@ -61,21 +101,26 @@ fun MapMarkersWithCustomWindow(listings: List<RealEstateListing>) {
                     modifier = Modifier.padding(16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(listing.listingUrl)
-                            .build(),
-                        contentDescription = "image of the listing",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.size(120.dp)
-                    )
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Text(text = listing.address.toString(), textAlign = TextAlign.Center)
-                    Spacer(modifier = Modifier.height(24.dp))
-                    Text(text = listing.listingUrl.toString(), textAlign = TextAlign.Center, modifier = Modifier.clickable {
-                    })
+//                    AsyncImage(
+//                        model = listing.urls.imageUrl,
+//                        contentDescription = "Image of the listing",
+//                        contentScale = ContentScale.Crop,
+//                    )
+                    Row() {
+                        Text(text = "Price: " + listing.details.price)
+                        Spacer(modifier = Modifier.padding(8.dp))
+                        Text(text = "Beds: " + listing.details.beds)
+                        Spacer(modifier = Modifier.padding(8.dp))
+                        Text(text = "Baths: " + listing.details.baths)
+                        Spacer(modifier = Modifier.padding(8.dp))
+                        Text(text = "SqFt: " + listing.details.sqFt)
+                    }
+                    Spacer(modifier = Modifier.padding(8.dp))
+                    Text(text = listing.urls.listingUrl)
                 }
             }
         }
     }
 }
+
+
