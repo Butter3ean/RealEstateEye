@@ -19,7 +19,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var navController: NavHostController
 
     // Register the permission request contract
-    private val permissionLauncher = registerForActivityResult(
+    private val permissionLaunchers = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->
         val fineLocationGranted = permissions[android.Manifest.permission.ACCESS_FINE_LOCATION] == true
@@ -44,7 +44,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
 
-                    permissionLauncher.launch(
+                    permissionLaunchers.launch(
                         arrayOf(
                             android.Manifest.permission.CAMERA,
                             android.Manifest.permission.ACCESS_FINE_LOCATION,
