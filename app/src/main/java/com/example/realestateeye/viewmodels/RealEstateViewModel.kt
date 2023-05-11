@@ -36,10 +36,10 @@ class RealEstateViewModel: ViewModel() {
         }
     }
 
-    fun getListingsByCity(city: String) {
+    fun getListingsByCity() {
         viewModelScope.launch {
             try {
-                val response = listingApiService.getListingsByCity(city)
+                val response = listingApiService.getListingsByCity("Savannah")
                 if(response.isSuccessful) {
                     _listings.value = response.body()
                 }

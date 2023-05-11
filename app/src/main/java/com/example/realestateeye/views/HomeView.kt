@@ -72,9 +72,3 @@ fun HomeView(navController: NavController) {
 }
 
 
-@Preview(showBackground = true)
-@Composable
-fun HomePreview() {
-    HomeView(navController = rememberNavController())
-}
-
