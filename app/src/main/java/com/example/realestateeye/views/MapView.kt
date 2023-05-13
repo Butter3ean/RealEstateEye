@@ -1,6 +1,13 @@
 package com.example.realestateeye.views
 
 import android.annotation.SuppressLint
+import android.content.Context
+import android.location.Address
+import android.location.Geocoder
+import android.location.Location
+import android.os.Build
+import android.widget.Toast
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,17 +19,22 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.example.realestateeye.models.RealEstateListing
 import com.example.realestateeye.viewmodels.RealEstateViewModel
+import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
 import com.google.android.gms.maps.model.LatLng
 import com.google.maps.android.compose.*
+import java.io.IOException
+import java.util.Locale
 
 
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @SuppressLint("MissingPermission")
 @Composable
 fun MapView() {
@@ -32,19 +44,46 @@ fun MapView() {
 
     val cameraPositionState = rememberCameraPositionState()
 
-    GoogleMap(
-        modifier = Modifier.fillMaxSize(),
-        cameraPositionState = cameraPositionState,
-        properties = MapProperties(isMyLocationEnabled = true)
-    ) {
-        MapMarkersWithCustomWindow(listings = listings)
+    Box() {
+        GoogleMap(
+            modifier = Modifier.fillMaxSize(),
+            cameraPositionState = cameraPositionState,
+            properties = MapProperties(isMyLocationEnabled = true)
+        ) {
+            GetCurrentLocationBtn()
+        }
+
     }
-
     listingViewModel.getListingsByCity()
-
 }
 
-//@OptIn(ExperimentalGlideComposeApi::class)
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
+@SuppressLint("MissingPermission")
+@Composable
+fun GetCurrentLocationBtn() {
+
+    val context = LocalContext.current
+    val geocoder = Geocoder(context)
+
+    val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
+
+    fusedLocationClient.lastLocation
+        .addOnSuccessListener { location: Location? ->
+            if (location != null) {
+                geocoder.getFromLocation(location.latitude, location.longitude, 1) {
+                    (Geocoder.GeocodeListener { result ->
+                        if (result.isNotEmpty()) {
+                            val city = result[0]
+                            Toast.makeText(context, "Location: $city", Toast.LENGTH_SHORT).show()
+                        }
+                    })
+                }
+
+            }
+
+        }
+}
+
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
 fun MapMarkersWithCustomWindow(listings: List<RealEstateListing>) {
@@ -80,6 +119,7 @@ fun MapMarkersWithCustomWindow(listings: List<RealEstateListing>) {
                         .clip(RoundedCornerShape(25.dp))
                 )
 
+
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -102,7 +142,6 @@ fun MapMarkersWithCustomWindow(listings: List<RealEstateListing>) {
                     }
 
                     Spacer(modifier = Modifier.padding(16.dp))
-
                 }
             }
         }
