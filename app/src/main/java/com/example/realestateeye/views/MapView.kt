@@ -51,6 +51,7 @@ fun MapView() {
             properties = MapProperties(isMyLocationEnabled = true)
         ) {
             GetCurrentLocationBtn()
+            MapMarkersWithCustomWindow(listings = listings)
         }
 
     }
@@ -98,6 +99,15 @@ fun MapMarkersWithCustomWindow(listings: List<RealEstateListing>) {
                 )
             ),
             icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE),
+            onClick = {
+                if(it.isInfoWindowShown) {
+                    it.hideInfoWindow()
+                    it.showInfoWindow()
+                    return@MarkerInfoWindow false
+                } else {
+                    return@MarkerInfoWindow true
+                }
+            }
         ) {
             Column(
                 modifier = Modifier
@@ -149,71 +159,6 @@ fun MapMarkersWithCustomWindow(listings: List<RealEstateListing>) {
 }
 
 
-//
-//@Composable
-//fun MapMarkersWithCustomWindow(listings: List<RealEstateListing>) {
-//    for (listing in listings) {
-//        MarkerInfoWindowContent(
-//            state = MarkerState(
-//                position = LatLng(
-//                    listing.coordinates.latitude,
-//                    listing.coordinates.longitude
-//                )
-//            ),
-//            icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE)
-//        ) {
-//            Column(
-//                modifier = Modifier.padding(16.dp),
-//                horizontalAlignment = Alignment.CenterHorizontally
-//            ) {
-//                Box(modifier = Modifier.size(200.dp)) {
-//                    SubcomposeAsyncImage(
-//                        model = ImageRequest.Builder(LocalContext.current)
-//                            .data(listing.urls.imageUrl)
-//                            .crossfade(true)
-//                            .build(),
-//                        loading = {
-//                            CircularProgressIndicator()
-//                        },
-//                        contentDescription = "Image of the listing",
-//                        modifier = Modifier
-//                            .fillMaxSize()
-//                            .aspectRatio(0.5f)
-//                            .scale(0.5f, 0.5f)
-//                    )
-//                }
-//                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-//                    Row(modifier = Modifier.fillMaxWidth()) {
-//                        Text(text = "Beds: " + listing.details.beds)
-//                        Spacer(modifier = Modifier.weight(1f))
-//                        Text(text = "Baths: " + listing.details.baths)
-//                    }
-//                    Spacer(modifier = Modifier.padding(8.dp))
-//                    Row(modifier = Modifier.fillMaxWidth()) {
-//                        Text(text = "Price: " + listing.details.price)
-//                        Spacer(modifier = Modifier.weight(1f))
-//                        Text(text = "SqFt: " + listing.details.sqFt)
-//                    }
-//                }
-//                Spacer(modifier = Modifier.padding(8.dp))
-//                Text(text = listing.urls.listingUrl)
-//            }
-//        }
-//    }
-//}
-//COIL Image
-//                    SubcomposeAsyncImage(
-//                        model = ImageRequest.Builder(context) // Use the passed-in context
-//                            .data(listing.urls.imageUrl)
-//                            .crossfade(true)
-//                            .build(),
-//                        loading = {
-//                            CircularProgressIndicator()
-//                        },
-//                        contentDescription = "Image of the listing",
-//                        modifier = Modifier
-//                            .fillMaxSize()
-//                            .aspectRatio(0.5f)
-//                            .scale(0.5f, 0.5f)
-//                    )
+
+
 
