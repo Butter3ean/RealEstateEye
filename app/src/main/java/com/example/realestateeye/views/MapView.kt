@@ -10,7 +10,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.AbsoluteRoundedCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
@@ -24,12 +25,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
+import com.example.realestateeye.R
 import com.example.realestateeye.models.RealEstateListing
+import com.example.realestateeye.ui.theme.Blue400
 import com.example.realestateeye.viewmodels.RealEstateViewModel
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
@@ -65,7 +69,10 @@ fun MapView() {
             MapMarkersWithCustomWindows(listings = listings, coords = currentCords)
         }
 
-        Button(
+        FloatingActionButton(
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(16.dp),
             onClick = {
                 getCurrentLocation(
                     context,
@@ -73,14 +80,38 @@ fun MapView() {
                     currentCords
                 ); listingViewModel.getListingsByCity(currentCity.value)
             },
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(16.dp)
+            containerColor = Blue400,
+            shape = RoundedCornerShape(32.dp),
         ) {
-            Text(text = "Get current city", textAlign = TextAlign.Center)
+            Icon(
+                painter = painterResource(id = R.drawable.ic_location_city),
+                contentDescription = null,
+                tint = Color.White,
+            )
         }
 
+
+//        Button(
+//            onClick = {
+//                getCurrentLocation(
+//                    context,
+//                    currentCity,
+//                    currentCords
+//                ); listingViewModel.getListingsByCity(currentCity.value)
+//            },
+//            modifier = Modifier
+//                .align(Alignment.BottomStart)
+//                .padding(16.dp)
+//        ) {
+//            Icon(
+//                painter = painterResource(id = R.drawable.ic_location_city),
+//                contentDescription = null
+//            )
+////            Text(text = "Get current city", textAlign = TextAlign.Center)
+//        }
     }
+
+
     listingViewModel.getListings()
 }
 
@@ -143,6 +174,8 @@ fun haversineDistance(currentCoords: MutableState<LatLng>, otherCoords: LatLng):
 fun MapMarkersWithCustomWindows(listings: List<RealEstateListing>, coords: MutableState<LatLng>) {
     for (listing in listings) {
 
+        val uriHandler = LocalUriHandler.current
+
         if (haversineDistance(
                 coords,
                 LatLng(listing.coordinates.latitude, listing.coordinates.longitude)
@@ -155,7 +188,8 @@ fun MapMarkersWithCustomWindows(listings: List<RealEstateListing>, coords: Mutab
                         listing.coordinates.longitude
                     )
                 ),
-                icon = BitmapDescriptorFactory.defaultMarker(BitmapDescriptorFactory.HUE_AZURE),
+                icon = BitmapDescriptorFactory.defaultMarker(202F),
+                onInfoWindowLongClick = { uriHandler.openUri(listing.urls.listingUrl) }
             ) {
 
                 Column(
