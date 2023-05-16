@@ -1,5 +1,8 @@
 package com.example.realestateeye.views
 
+import android.content.Context
+import android.content.Intent
+import android.provider.MediaStore
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -10,20 +13,25 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
 import com.example.realestateeye.R
 import com.example.realestateeye.navigation.Screen
 import com.example.realestateeye.ui.theme.Blue400
 import com.example.realestateeye.ui.theme.Blue600
-import com.example.realestateeye.ui.theme.RealEstateEyeTheme
 
+fun openCameraApp(context: Context) {
+    val intent = Intent(MediaStore.ACTION_IMAGE_CAPTURE)
+    context.startActivity(intent)
+}
 
 @Composable
 fun HomeView(navController: NavController) {
+
+    val context = LocalContext.current
+
     Box(modifier = Modifier
         .fillMaxSize()
         .background(color = Blue600)) {
@@ -54,7 +62,7 @@ fun HomeView(navController: NavController) {
             }
 
             Button(
-                onClick = { navController.navigate(route = Screen.CameraScreen.route) },
+                onClick = { openCameraApp(context = context) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(15.dp),
@@ -67,8 +75,23 @@ fun HomeView(navController: NavController) {
                 Spacer(modifier = Modifier.width(width = 8.dp))
                 Text(text = "Capture an Image")
             }
+//          Button(
+//                onClick = { navController.navigate(route = Screen.CameraScreen.route) },
+//                modifier = Modifier
+//                    .fillMaxWidth()
+//                    .padding(15.dp),
+//                colors = ButtonDefaults.buttonColors(Blue400)
+//            ) {
+//                Icon(
+//                    painter = painterResource(id = R.drawable.ic_camera),
+//                    contentDescription = "Icon of a camera"
+//                )
+//                Spacer(modifier = Modifier.width(width = 8.dp))
+//                Text(text = "Capture an Image")
+//            }
         }
     }
 }
+
 
 

@@ -89,30 +89,9 @@ fun MapView() {
                 tint = Color.White,
             )
         }
-
-
-//        Button(
-//            onClick = {
-//                getCurrentLocation(
-//                    context,
-//                    currentCity,
-//                    currentCords
-//                ); listingViewModel.getListingsByCity(currentCity.value)
-//            },
-//            modifier = Modifier
-//                .align(Alignment.BottomStart)
-//                .padding(16.dp)
-//        ) {
-//            Icon(
-//                painter = painterResource(id = R.drawable.ic_location_city),
-//                contentDescription = null
-//            )
-////            Text(text = "Get current city", textAlign = TextAlign.Center)
-//        }
     }
 
-
-    listingViewModel.getListings()
+//    listingViewModel.getListings()
 }
 
 //gets the current coordinates of the user
@@ -189,7 +168,7 @@ fun MapMarkersWithCustomWindows(listings: List<RealEstateListing>, coords: Mutab
                     )
                 ),
                 icon = BitmapDescriptorFactory.defaultMarker(202F),
-                onInfoWindowLongClick = { uriHandler.openUri(listing.urls.listingUrl) }
+                onInfoWindowLongClick = { uriHandler.openUri(listing.urls.listingUrl) },
             ) {
 
                 Column(
