@@ -2,23 +2,28 @@ package com.example.realestateeye.views
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.location.Geocoder
-import android.location.Location
 import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.AbsoluteRoundedCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.BottomAppBar
+import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,201 +32,268 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
+import com.example.realestateeye.LocationManager
 import com.example.realestateeye.R
 import com.example.realestateeye.models.RealEstateListing
 import com.example.realestateeye.ui.theme.Blue400
 import com.example.realestateeye.viewmodels.RealEstateViewModel
-import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.BitmapDescriptorFactory
+import com.google.android.gms.maps.model.CameraPosition
 import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.CameraPositionState
 import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.MapProperties
 import com.google.maps.android.compose.MarkerInfoWindow
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import haversineDistance
+import java.text.DecimalFormat
 import kotlin.math.*
 
+@OptIn(ExperimentalMaterial3Api::class)
 @RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @SuppressLint("MissingPermission")
 @Composable
-fun MapView() {
+fun MapView(listingViewModel: RealEstateViewModel = viewModel()) {
 
-    val listingViewModel: RealEstateViewModel = viewModel()
     val listings by listingViewModel.listings.observeAsState(initial = emptyList())
-
-    val cameraPositionState = rememberCameraPositionState()
+    val context = LocalContext.current
 
     val currentCity = remember { mutableStateOf("") }
     val currentCords = remember { mutableStateOf(LatLng(0.0, 0.0)) }
 
-    val context = LocalContext.current
+    val locationManager = LocationManager()
+    locationManager.getCurrentLocation(context, currentCity, currentCords)
 
-    Box() {
-        GoogleMap(
-            modifier = Modifier.fillMaxSize(),
-            cameraPositionState = cameraPositionState,
-            properties = MapProperties(isMyLocationEnabled = true)
-        ) {
-            MapMarkersWithCustomWindows(listings = listings, coords = currentCords)
+    val cameraPositionState = rememberCameraPositionState {
+        position = CameraPosition.fromLatLngZoom(currentCords.value, 5f)
+    }
+
+    var value by remember { mutableStateOf("5") }
+
+    Scaffold(
+        bottomBar = {
+            MapAppBar(
+                context,
+                value,
+                locationManager,
+                listingViewModel,
+                currentCity,
+                currentCords
+            ) { newValue ->
+                value = newValue
+            }
         }
-
-        FloatingActionButton(
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .padding(16.dp),
-            onClick = {
-                getCurrentLocation(
-                    context,
-                    currentCity,
-                    currentCords
-                ); listingViewModel.getListingsByCity(currentCity.value)
-            },
-            containerColor = Blue400,
-            shape = RoundedCornerShape(32.dp),
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_location_city),
-                contentDescription = null,
-                tint = Color.White,
+    ) { contentPadding ->
+        Box(modifier = Modifier.padding(contentPadding)) {
+            ListingMap(
+                cameraPositionState = cameraPositionState,
+                listings = listings,
+                coordinates = currentCords,
+                value
             )
         }
     }
 
-//    listingViewModel.getListings()
 }
 
-//gets the current coordinates of the user
-@RequiresApi(Build.VERSION_CODES.TIRAMISU)
-@SuppressLint("MissingPermission")
-fun getCurrentLocation(context: Context, city: MutableState<String>, coords: MutableState<LatLng>) {
-
-    val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
-    fusedLocationClient.lastLocation
-        .addOnSuccessListener {
-            if (it != null) {
-                coords.value = LatLng(it.latitude, it.longitude)
-                getCurrentCity(context = context, location = it, city)
-            }
-        }
-}
-
-//uses reverse geocoding to get the current city from the users coordinates
-@RequiresApi(Build.VERSION_CODES.TIRAMISU)
-fun getCurrentCity(context: Context, location: Location, city: MutableState<String>) {
-    val geocoder = Geocoder(context)
-    val address = geocoder.getFromLocation(location.latitude, location.longitude, 1)
-    if (address != null) {
-        if (address.isNotEmpty()) {
-            city.value = address[0]?.locality.toString()
-//            Toast.makeText(context, "Location: $city", Toast.LENGTH_SHORT).show()
+@Composable
+fun MapAppBar(
+    context: Context,
+    value: String,
+    locationManager: LocationManager,
+    viewModel: RealEstateViewModel,
+    city: MutableState<String>,
+    coordinates: MutableState<LatLng>,
+    onValueChange: (String) -> Unit
+) {
+    BottomAppBar(containerColor = Blue400) {
+        Row(modifier = Modifier.fillMaxSize()) {
+            DistanceTextField(value, onValueChange)
+            GetListingsButton(locationManager, context, viewModel, city, coordinates)
         }
     }
-
 }
 
-//returns the distance between two sets of coordinates in km
-fun haversineDistance(currentCoords: MutableState<LatLng>, otherCoords: LatLng): Double {
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DistanceTextField(value: String, onValueChange: (String) -> Unit) {
 
-    val lat1 = currentCoords.value.latitude
-    val lon1 = currentCoords.value.longitude
+    TextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(text = "Enter max distance") },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        modifier = Modifier.padding(4.dp, 8.dp, 18.dp, 0.dp),
+        colors = TextFieldDefaults.textFieldColors(containerColor = Color.White)
+    )
+}
 
-    val lat2 = otherCoords.latitude
-    val lon2 = otherCoords.longitude
+@Composable
+fun GetListingsButton(
+    locationManager: LocationManager,
+    context: Context,
+    viewModel: RealEstateViewModel,
+    city: MutableState<String>,
+    coordinates: MutableState<LatLng>
+) {
+    Button(
+        onClick = {
+            locationManager.getCurrentLocation(
+                context,
+                city,
+                coordinates
+            ); viewModel.getListingsByCity(city.value)
+        },
+        modifier = Modifier.padding(0.dp, 10.dp)
+    ) {
+        Text(text = "GO")
+    }
+}
 
-    val earthRadius = 6371 // Radius of the Earth in kilometers
-
-    val diffLat = Math.toRadians(lat2 - lat1)
-    val diffLon = Math.toRadians(lon2 - lon1)
-
-    val a = sin(diffLat / 2) * sin(diffLat / 2) +
-            cos(Math.toRadians(lat1)) * cos(Math.toRadians(lat2)) *
-            sin(diffLon / 2) * sin(diffLon / 2)
-
-    val c = 2 * atan2(sqrt(a), sqrt(1 - a))
-
-    return earthRadius * c
+@Composable
+fun ListingMap(
+    cameraPositionState: CameraPositionState,
+    listings: List<RealEstateListing>,
+    coordinates: MutableState<LatLng>,
+    value: String
+) {
+    GoogleMap(
+        modifier = Modifier.fillMaxSize(),
+        cameraPositionState = cameraPositionState,
+        properties = MapProperties(isMyLocationEnabled = true)
+    ) {
+        MapMarkersWithCustomWindows(listings = listings, coords = coordinates, value = value)
+    }
 
 }
 
 //creates a marker with a markerWindow that shows information about each listing
 @OptIn(ExperimentalGlideComposeApi::class)
 @Composable
-fun MapMarkersWithCustomWindows(listings: List<RealEstateListing>, coords: MutableState<LatLng>) {
-    for (listing in listings) {
+fun MapMarkersWithCustomWindows(
+    listings: List<RealEstateListing>,
+    coords: MutableState<LatLng>,
+    value: String,
+) {
 
-        val uriHandler = LocalUriHandler.current
+    val formatter = DecimalFormat("#,###")
+    val distance = value.trim().toIntOrNull()
 
-        if (haversineDistance(
-                coords,
-                LatLng(listing.coordinates.latitude, listing.coordinates.longitude)
-            ) < 5
-        ) {
-            MarkerInfoWindow(
-                state = MarkerState(
-                    position = LatLng(
-                        listing.coordinates.latitude,
-                        listing.coordinates.longitude
-                    )
-                ),
-                icon = BitmapDescriptorFactory.defaultMarker(202F),
-                onInfoWindowLongClick = { uriHandler.openUri(listing.urls.listingUrl) },
+    if (distance != null) {
+
+        for (listing in listings) {
+
+            val uriHandler = LocalUriHandler.current
+
+            if (haversineDistance(
+                    coords,
+                    LatLng(listing.coordinates.latitude, listing.coordinates.longitude)
+                ) < distance
             ) {
-
-                Column(
-                    modifier = Modifier
-                        .size(350.dp)
-                        .background(
-                            Color.White,
-                            shape = RoundedCornerShape(35.dp, 35.dp, 35.dp, 35.dp)
-                        ),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(text = listing.mlsNum.toString(), modifier = Modifier.padding(8.dp))
-                    Box(
-                        modifier = Modifier
-                            .width(325.dp)
-                            .height(235.dp)
-                            .padding(12.dp)
-                    ) {
-
-                        GlideImage(
-                            model = listing.urls.imageUrl,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .padding(8.dp)
-                                .fillMaxSize()
-                                .clip(AbsoluteRoundedCornerShape(25.dp)),
-                            contentScale = ContentScale.Crop,
+                MarkerInfoWindow(
+                    state = MarkerState(
+                        position = LatLng(
+                            listing.coordinates.latitude,
+                            listing.coordinates.longitude
                         )
-                    }
+                    ),
+                    icon = BitmapDescriptorFactory.defaultMarker(202F),
+                    onInfoWindowLongClick = { uriHandler.openUri(listing.urls.listingUrl) },
+                ) {
 
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center
+                    Column(
+                        modifier = Modifier
+                            .size(350.dp)
+                            .background(
+                                Color.White,
+                                shape = RoundedCornerShape(35.dp, 35.dp, 35.dp, 35.dp)
+                            ),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "$${formatter.format(listing.details.price)}",
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily(Font(R.font.cabin)),
+                            fontSize = 30.sp
+                        )
+                        Text(
+                            text = "${listing.address.street}, " +
+                                    "${listing.address.city}, " +
+                                    "${listing.address.state} " +
+                                    listing.address.zipCode,
+                            fontFamily = FontFamily(Font(R.font.cabin))
+                        )
+                        Box(
+                            modifier = Modifier
+                                .width(325.dp)
+                                .height(235.dp)
+                                .padding(12.dp)
                         ) {
-                            Text(text = "Beds: " + listing.details.beds)
-                            Spacer(modifier = Modifier.padding(8.dp))
-                            Text(text = "Baths: " + listing.details.baths)
+
+                            GlideImage(
+                                model = listing.urls.imageUrl,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(AbsoluteRoundedCornerShape(25.dp)),
+                                contentScale = ContentScale.Crop,
+                            )
+
                         }
-                        Spacer(modifier = Modifier.padding(8.dp))
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center
+
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            modifier = Modifier.padding(0.dp, 4.dp, 0.dp, 0.dp)
                         ) {
-                            Text(text = "Price: " + listing.details.price)
-                            Spacer(modifier = Modifier.padding(8.dp))
-                            Text(text = "SqFt: " + listing.details.sqFt)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_bed),
+                                    contentDescription = null
+                                )
+                                Text(
+                                    text = listing.details.beds.toString(),
+                                    fontFamily = FontFamily(Font(R.font.cabin))
+                                )
+                                Spacer(modifier = Modifier.padding(16.dp))
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_bath),
+                                    contentDescription = null
+                                )
+                                Text(
+                                    text = listing.details.baths.toString(),
+                                    fontFamily = FontFamily(Font(R.font.cabin))
+                                )
+                                Spacer(modifier = Modifier.padding(16.dp))
+                                Icon(
+                                    painter = painterResource(id = R.drawable.ic_sqft),
+                                    contentDescription = null
+                                )
+                                Text(
+                                    text = formatter.format(listing.details.sqFt),
+                                    fontFamily = FontFamily(Font(R.font.cabin))
+                                )
+                            }
                         }
-                        Spacer(modifier = Modifier.padding(16.dp))
                     }
                 }
             }
         }
     }
+
 }
+
+
 

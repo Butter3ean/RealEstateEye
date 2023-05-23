@@ -1,22 +1,18 @@
 package com.example.realestateeye.navigation
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.livedata.observeAsState
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.example.realestateeye.viewmodels.RealEstateViewModel
 import com.example.realestateeye.views.CameraView
 import com.example.realestateeye.views.HomeView
 import com.example.realestateeye.views.MapView
 
+@RequiresApi(Build.VERSION_CODES.TIRAMISU)
 @Composable
 fun SetupNavGraph(navHostController: NavHostController) {
-
-    val listingViewModel: RealEstateViewModel = viewModel()
-    val listings by listingViewModel.listings.observeAsState(initial = emptyList())
 
     NavHost(
         navController = navHostController,
@@ -35,5 +31,4 @@ fun SetupNavGraph(navHostController: NavHostController) {
             CameraView()
         }
     }
-    listingViewModel.getListings()
 }
