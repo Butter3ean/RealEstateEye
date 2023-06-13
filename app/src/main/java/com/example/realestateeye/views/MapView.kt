@@ -39,6 +39,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.bumptech.glide.Glide
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import com.bumptech.glide.integration.compose.GlideImage
 import com.example.realestateeye.LocationManager
@@ -79,6 +80,7 @@ fun MapView(listingViewModel: RealEstateViewModel = viewModel()) {
     }
 
     var value by remember { mutableStateOf("5") }
+    var loaded by remember { mutableStateOf(false) }
 
     Scaffold(
         bottomBar = {
@@ -103,7 +105,6 @@ fun MapView(listingViewModel: RealEstateViewModel = viewModel()) {
             )
         }
     }
-
 }
 
 @Composable
@@ -174,7 +175,6 @@ fun ListingMap(
     ) {
         MapMarkersWithCustomWindows(listings = listings, coords = coordinates, value = value)
     }
-
 }
 
 //creates a marker with a markerWindow that shows information about each listing
@@ -185,7 +185,6 @@ fun MapMarkersWithCustomWindows(
     coords: MutableState<LatLng>,
     value: String,
 ) {
-
     val formatter = DecimalFormat("#,###")
     val distance = value.trim().toIntOrNull()
 
@@ -240,6 +239,10 @@ fun MapMarkersWithCustomWindows(
                                 .padding(12.dp)
                         ) {
 
+                           val img = Glide.with(LocalContext.current)
+                                .load(listing.urls.imageUrl)
+                                .preload()
+
                             GlideImage(
                                 model = listing.urls.imageUrl,
                                 contentDescription = null,
@@ -292,7 +295,6 @@ fun MapMarkersWithCustomWindows(
             }
         }
     }
-
 }
 
 
