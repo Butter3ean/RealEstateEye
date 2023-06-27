@@ -12,7 +12,7 @@ import okhttp3.OkHttpClient
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
-class RealEstateViewModel() : ViewModel() {
+class RealEstateViewModel : ViewModel() {
 
     private val retrofit = Retrofit.Builder()
         .baseUrl("https://real-estate-eye-api.herokuapp.com")
@@ -32,18 +32,18 @@ class RealEstateViewModel() : ViewModel() {
 //    val city: LiveData<String> get() = _city
 
 
-//    fun getListings() {
-//        viewModelScope.launch {
-//            try {
-//                val response = listingApiService.getListings()
-//                if (response.isSuccessful) {
-//                    _listings.value = response.body()
-//                }
-//            } catch (_: java.lang.Exception) {
-//
-//            }
-//        }
-//    }
+    fun getListings() {
+        viewModelScope.launch {
+            try {
+                val response = listingApiService.getListings()
+                if (response.isSuccessful) {
+                    _listings.value = response.body()
+                }
+            } catch (_: java.lang.Exception) {
+
+            }
+        }
+    }
 
 
     fun getListingsByCity(city: String) {

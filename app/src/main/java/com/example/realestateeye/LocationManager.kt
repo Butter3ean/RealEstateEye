@@ -8,7 +8,7 @@ import androidx.compose.runtime.MutableState
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.maps.model.LatLng
 
-class LocationManager() {
+class LocationManager {
 
     @SuppressLint("MissingPermission")
     fun getCurrentLocation(
