@@ -41,7 +41,7 @@
         </activity>
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="com.example.realestateeye.fileprovider"
+            android:authorities="com.example.realestateeye.provider"
             android:grantUriPermissions="true"
             android:exported="false">
             <meta-data
