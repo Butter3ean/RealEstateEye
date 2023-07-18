@@ -5,7 +5,6 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.net.Uri
 import android.os.Environment
-import android.provider.MediaStore
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -14,7 +13,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -47,19 +45,26 @@ import com.example.realestateeye.models.RealEstateListing
 import com.example.realestateeye.navigation.Screen
 import com.example.realestateeye.ui.theme.Blue400
 import com.example.realestateeye.viewmodels.RealEstateViewModel
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.opencv.android.Utils
 import org.opencv.core.CvType
+import org.opencv.core.DMatch
 import org.opencv.core.Mat
 import org.opencv.core.MatOfDMatch
 import org.opencv.core.MatOfKeyPoint
 import org.opencv.features2d.DescriptorMatcher
+import org.opencv.features2d.Feature2D
 import org.opencv.features2d.ORB
 import org.opencv.features2d.SIFT
 import java.io.File
+import java.io.IOException
+import java.lang.Integer.max
 import java.net.HttpURLConnection
 import java.net.URL
 import java.text.SimpleDateFormat
@@ -75,21 +80,13 @@ fun HomeView(navController: NavController, listingViewModel: RealEstateViewModel
     val context = LocalContext.current
     val comp = rememberLottieComposition(LottieCompositionSpec.RawRes(R.raw.ani_background))
 
-    var hasImage by remember { mutableStateOf(false) }
     var imgUri by remember { mutableStateOf<Uri?>(null) }
-
-
-//    val cameraLauncher = rememberLauncherForActivityResult(
-//        contract = ActivityResultContracts.TakePicture(),
-//        onResult = { success -> hasImage = success })
 
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture(),
         onResult = { success ->
-
-//            imgUri?.let { compareImagesORB(it, listings, context) }
-//            imgUri?.let { compareImagesSURF(it, listings, context) }
-            imgUri?.let { compareImagesSIFT(it, listings, context) }
+//            imgUri?.let { compareImagesORB(image = it, listings = listings, context) }
+            imgUri?.let { compareImagesSIFT(image = it, listings = listings, context) }
         })
 
     val progress by animateLottieCompositionAsState(
@@ -101,8 +98,7 @@ fun HomeView(navController: NavController, listingViewModel: RealEstateViewModel
 
         LottieAnimation(
             modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight(),
+                .fillMaxSize(),
             composition = comp.value,
             progress = { progress })
 
@@ -116,7 +112,6 @@ fun HomeView(navController: NavController, listingViewModel: RealEstateViewModel
                 painter = painterResource(id = R.drawable.realestateeye_low_resolution_logo_white_on_transparent_background),
                 contentDescription = null
             )
-
 
             Spacer(modifier = Modifier.padding(128.dp))
 
@@ -141,10 +136,6 @@ fun HomeView(navController: NavController, listingViewModel: RealEstateViewModel
                     imgUri =
                         FileProvider.getUriForFile(context, "${context.packageName}.provider", file)
                     cameraLauncher.launch(imgUri)
-//                    val uri = ComposeFileProvider.getImageUri(context = context)
-//                    imgUri = uri
-//                    cameraLauncher.launch(uri)
-
 
                 },
                 modifier = Modifier
@@ -159,169 +150,191 @@ fun HomeView(navController: NavController, listingViewModel: RealEstateViewModel
                 Spacer(modifier = Modifier.width(width = 8.dp))
                 Text(text = "Capture an Image")
             }
-
-
-        }
-    }
-
-}
-
-//fun compareImagesSURF(img: Uri, listings: List<RealEstateListing>, context: Context) {
-//    var highestMatch = ""
-//    var highestScore = 0.0
-//
-//    val bitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, img)
-//    val img1 = Mat(bitmap.height, bitmap.width, CvType.CV_8UC1)
-//    Utils.bitmapToMat(bitmap, img1)
-//
-//    val keypoints1 = MatOfKeyPoint()
-//    val descriptors1 = Mat()
-//
-//    val surf = SURF.create()
-//    val surf = SURF
-//
-//    surf.detectAndCompute(img1, Mat(), keypoints1, descriptors1)
-//    val matcher = DescriptorMatcher.create(DescriptorMatcher.FLANNBASED)
-//
-//    val scope = MainScope()
-//
-//    for (listing in listings) {
-//        scope.launch {
-//            val img2Bitmap = loadBitmapFromUrl(listing.urls.imageUrl)
-//            val img2 = img2Bitmap?.let { Mat(it.height, img2Bitmap.width, CvType.CV_8UC1) }
-//            Utils.bitmapToMat(img2Bitmap, img2)
-//
-//            val keypoints2 = MatOfKeyPoint()
-//            val descriptors2 = Mat()
-//            surf.detectAndCompute(img2, Mat(), keypoints2, descriptors2)
-//
-//            val matches = MatOfDMatch()
-//            matcher.match(descriptors1, descriptors2, matches)
-//
-//            val score = matches.toArray().size.toDouble()
-//
-//            if (score > highestScore) {
-//                highestMatch = listing.urls.listingUrl
-//                highestScore = score
-//            }
-//
-//            Log.d("SCORES", "highestScore: $highestScore")
-//            Log.d("URLS", "url: $highestMatch")
-//        }
-//    }
-//}
-
-
-fun compareImagesSIFT(img: Uri, listings: List<RealEstateListing>, context: Context) {
-    var highestMatch = ""
-    var highestScore = 0.0
-
-    val bitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, img)
-    val img1 = Mat(bitmap.height, bitmap.width, CvType.CV_8UC1)
-    Utils.bitmapToMat(bitmap, img1)
-
-    val keypoints1 = MatOfKeyPoint()
-    val descriptors1 = Mat()
-
-    val sift = SIFT.create()
-
-    sift.detectAndCompute(img1, Mat(), keypoints1, descriptors1)
-    val matcher = DescriptorMatcher.create(DescriptorMatcher.FLANNBASED)
-
-    val scope = MainScope()
-
-    for (listing in listings) {
-        scope.launch {
-            val img2Bitmap = loadBitmapFromUrl(listing.urls.imageUrl)
-            val img2 = img2Bitmap?.let { Mat(it.height, img2Bitmap.width, CvType.CV_8UC1) }
-            Utils.bitmapToMat(img2Bitmap, img2)
-
-            val keypoints2 = MatOfKeyPoint()
-            val descriptors2 = Mat()
-            sift.detectAndCompute(img2, Mat(), keypoints2, descriptors2)
-
-            val matches = MatOfDMatch()
-            matcher.match(descriptors1, descriptors2, matches)
-
-            val score = matches.toArray().size.toDouble()
-
-            if (score > highestScore) {
-                highestMatch = listing.urls.listingUrl
-                highestScore = score
-            }
-
-            Log.d("SCORES", "highestScore: $highestScore")
-            Log.d("URLS", "url: $highestMatch")
         }
     }
 }
 
-
-fun compareImagesORB(img: Uri, listings: List<RealEstateListing>, context: Context) {
-
-    var highestMatch = ""
-    var highestScore = 0.0
-
-
-    val bitmap = MediaStore.Images.Media.getBitmap(context.contentResolver, img)
-    val img1 = Mat(bitmap.height, bitmap.width, CvType.CV_8UC1)
-    Utils.bitmapToMat(bitmap, img1)
-
-    val keypoints1 = MatOfKeyPoint()
-    val descriptors1 = Mat()
+fun compareImagesORB(image: Uri, listings: List<RealEstateListing>, context: Context) {
 
     val orb = ORB.create()
-
-
-    orb.detectAndCompute(img1, Mat(), keypoints1, descriptors1)
-    val matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE_HAMMING)
-
     val scope = MainScope()
 
+    //convert the uri to a bitmap
+    val bitmap = uriToBitmap(image, context)
+    //convert the bitmap to a mat
+    val baseMat = bitmap?.let { toMat(it) }
+
+    val baseKeyPoints = MatOfKeyPoint()
+    val baseDescriptors = Mat()
+
+    orb.detectAndCompute(baseMat, Mat(), baseKeyPoints, baseDescriptors)
+
+    val comparisonTasks = mutableListOf<Deferred<Pair<String, Float>>>()
+
     for (listing in listings) {
+        val task = scope.async {
+            val urlBitmap = urlToBitmap(listing.urls.imageUrl)
+            val listingMat = urlBitmap?.let { toMat(it) }
 
-        scope.launch {
-            val img2Bitmap = loadBitmapFromUrl(listing.urls.imageUrl)
-            val img2 = img2Bitmap?.let { Mat(it.height, img2Bitmap.width, CvType.CV_8UC1) }
-            Utils.bitmapToMat(img2Bitmap, img2)
+            val listingKeypoints = MatOfKeyPoint()
+            val listingDescriptors = Mat()
+            orb.detectAndCompute(listingMat, Mat(), listingKeypoints, listingDescriptors)
 
-            val keypoint2 = MatOfKeyPoint()
-            val descriptors2 = Mat()
-            orb.detectAndCompute(img2, Mat(), keypoint2, descriptors2)
-
+            val matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE_HAMMING)
             val matches = MatOfDMatch()
-            matcher.match(descriptors1, descriptors2, matches)
+            matcher.match(baseDescriptors, listingDescriptors, matches)
 
-            val score = matches.toArray().size.toDouble()
+            val distSum = matches.toArray().sumByDouble { it.distance.toDouble() }
 
-            if (score > highestScore) {
-                highestMatch = listing.urls.listingUrl
-                highestScore = score
+            val simScore = if(matches.size().height > 0) {
+                (distSum / matches.size().height).toFloat()
+            } else {
+                Float.MAX_VALUE
             }
 
-            Log.d("SCORES", "highestScore: $highestScore")
-            Log.d("URLS", "url: $highestMatch")
+            listing.urls.listingUrl to simScore
         }
-
+        comparisonTasks.add(task)
     }
 
+    scope.launch {
+        val results = comparisonTasks.awaitAll()
+        var highestScore = Float.MIN_VALUE
+        var highestUrl = ""
+        var lowestScore = Float.MAX_VALUE
+        var lowestUrl = ""
+        for((url, score) in results) {
+            Log.d("RESULTS", "URL: $url, SCORE: $score")
+            if(score > highestScore) {
+                highestScore = score
+                highestUrl = url
+            }
+
+            if(score < lowestScore) {
+                lowestScore = score
+                lowestUrl = url
+            }
+        }
+
+        Log.d("HIGHEST", "HIGHESTURL: $highestUrl, HIGHESTSCORE: $highestScore")
+        Log.d("LOWEST", "LOWESTURL: $lowestUrl, LOWESTSCORE: $lowestScore")
+    }
 }
 
-suspend fun loadBitmapFromUrl(imageUrl: String): Bitmap? = withContext(Dispatchers.IO) {
+fun compareImagesSIFT(image: Uri, listings: List<RealEstateListing>, context: Context) {
+
+    val sift = SIFT.create()
+    val scope = MainScope()
+
+    //convert the uri to a bitmap
+    val bitmap = uriToBitmap(image, context)
+    //convert the bitmap to a mat
+    val baseMat = bitmap?.let { toMat(it) }
+
+    val baseKeyPoints = MatOfKeyPoint()
+    val baseDescriptors = Mat()
+
+    sift.detectAndCompute(baseMat, Mat(), baseKeyPoints, baseDescriptors)
+
+    val comparisonTasks = mutableListOf<Deferred<Pair<String, Float>>>()
+
+    for (listing in listings) {
+        val task = scope.async {
+            val urlBitmap = urlToBitmap(listing.urls.imageUrl)
+            val listingMat = urlBitmap?.let { toMat(it) }
+
+            val listingKeypoints = MatOfKeyPoint()
+            val listingDescriptors = Mat()
+            sift.detectAndCompute(listingMat, Mat(), listingKeypoints, listingDescriptors)
+
+            val matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE)
+            val matches = MatOfDMatch()
+            matcher.match(baseDescriptors, listingDescriptors, matches)
+
+            val distSum = matches.toArray().sumByDouble { it.distance.toDouble() }
+
+            val simScore = if(matches.size().height > 0) {
+                (distSum / matches.size().height).toFloat()
+            } else {
+                Float.MAX_VALUE
+            }
+
+            listing.urls.listingUrl to simScore
+        }
+        comparisonTasks.add(task)
+    }
+
+    scope.launch {
+        val results = comparisonTasks.awaitAll()
+        var highestScore = Float.MIN_VALUE
+        var highestUrl = ""
+        var lowestScore = Float.MAX_VALUE
+        var lowestUrl = ""
+        for((url, score) in results) {
+            Log.d("RESULTS", "URL: $url, SCORE: $score")
+            if(score > highestScore) {
+                highestScore = score
+                highestUrl = url
+            }
+
+            if(score < lowestScore) {
+                lowestScore = score
+                lowestUrl = url
+            }
+        }
+
+        Log.d("HIGHEST", "HIGHESTURL: $highestUrl, HIGHESTSCORE: $highestScore")
+        Log.d("LOWEST", "LOWESTURL: $lowestUrl, LOWESTSCORE: $lowestScore")
+    }
+}
+
+
+fun uriToBitmap(uri: Uri, context: Context): Bitmap? {
+
     var bitmap: Bitmap? = null
     try {
-        val url = URL(imageUrl)
-        val connection = url.openConnection() as HttpURLConnection
+        val inputStream = context.contentResolver.openInputStream(uri)
+        if (inputStream != null) {
+            bitmap = BitmapFactory.decodeStream(inputStream)
+            inputStream.close()
+        }
+
+    } catch (e: IOException) {
+        e.printStackTrace()
+    }
+
+    return bitmap
+}
+
+suspend fun urlToBitmap(url: String): Bitmap? = withContext(Dispatchers.IO) {
+
+    try {
+        val imageUrl = URL(url)
+        val connection = imageUrl.openConnection() as HttpURLConnection
         connection.doInput = true
         connection.connect()
+
         val inputStream = connection.inputStream
-        bitmap = BitmapFactory.decodeStream(inputStream)
+        val bitmap = BitmapFactory.decodeStream(inputStream)
+
+        inputStream.close()
+        connection.disconnect()
+
+        return@withContext bitmap
+
     } catch (e: Exception) {
         e.printStackTrace()
     }
-    bitmap
+
+    return@withContext null
+
 }
 
+fun toMat(bitmap: Bitmap): Mat {
+    val mat = Mat(bitmap.height, bitmap.width, CvType.CV_8UC4)
+    Utils.bitmapToMat(bitmap, mat)
+    return mat
+}
 
 fun createImageFile(context: Context): File {
     val timeStamp: String = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
